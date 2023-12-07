@@ -80,6 +80,7 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
                 int entityId = ((EntityTrackerUpdateS2CPacketAccessor) packet).getEntityId();
                 if(entityId == this.player.getId() && ((EntityDisguise) this.player).isDisguised()) {
                     List<DataTracker.Entry<?>> trackedValues = this.player.getDataTracker().getDirtyEntries();
+                    if(trackedValues == null) trackedValues = new ArrayList<>();
                     if(((EntityDisguise) this.player).getDisguiseType() != EntityType.PLAYER) {
                         Byte flags = this.player.getDataTracker().get(EntityAccessor.getFLAGS());
 
@@ -101,6 +102,7 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
                         if(disguised != null) {
                             ((DisguiseUtils) original).updateTrackedData();
                             List<DataTracker.Entry<?>> trackedValues = disguised.getDataTracker().getDirtyEntries();
+                            if(trackedValues == null) trackedValues = new ArrayList<>();
                             ((EntityTrackerUpdateS2CPacketAccessor) packet).setTrackedValues(trackedValues);
                         }
                     }

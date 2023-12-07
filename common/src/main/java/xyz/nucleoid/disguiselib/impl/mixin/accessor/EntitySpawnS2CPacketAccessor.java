@@ -11,7 +11,7 @@ import java.util.UUID;
 @Mixin(EntitySpawnS2CPacket.class)
 public interface EntitySpawnS2CPacketAccessor {
     @Mutable
-    @Accessor("entityType")
+    @Accessor("entityTypeId")
     void setEntityType(EntityType<?> entityType);
     @Mutable
     @Accessor("entityData")

@@ -13,6 +13,8 @@ import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.Entry;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -77,13 +79,13 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
                 // an ugly fix for #6
                 int entityId = ((EntityTrackerUpdateS2CPacketAccessor) packet).getEntityId();
                 if(entityId == this.player.getId() && ((EntityDisguise) this.player).isDisguised()) {
-                    List<DataTracker.SerializedEntry<?>> trackedValues = this.player.getDataTracker().getChangedEntries();
+                    List<DataTracker.Entry<?>> trackedValues = this.player.getDataTracker().getDirtyEntries();
                     if(((EntityDisguise) this.player).getDisguiseType() != EntityType.PLAYER) {
                         Byte flags = this.player.getDataTracker().get(EntityAccessor.getFLAGS());
 
-                        boolean removed = trackedValues.removeIf(entry -> entry.value().equals(flags));
+                        boolean removed = trackedValues.removeIf(entry -> entry.get().equals(flags));
                         if(removed) {
-                            DataTracker.SerializedEntry<Byte> fakeInvisibleFlag = DataTracker.SerializedEntry.of(EntityAccessor.getFLAGS(), (byte) (flags | 1 << 5));
+                            DataTracker.Entry<Byte> fakeInvisibleFlag = new DataTracker.Entry<>(EntityAccessor.getFLAGS(), (byte) (flags | 1 << 5));
                             trackedValues.add(fakeInvisibleFlag);
                         }
                     }
@@ -98,7 +100,7 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
                         Entity disguised = ((EntityDisguise) original).getDisguiseEntity();
                         if(disguised != null) {
                             ((DisguiseUtils) original).updateTrackedData();
-                            List<DataTracker.SerializedEntry<?>> trackedValues = disguised.getDataTracker().getChangedEntries();
+                            List<DataTracker.Entry<?>> trackedValues = disguised.getDataTracker().getDirtyEntries();
                             ((EntityTrackerUpdateS2CPacketAccessor) packet).setTrackedValues(trackedValues);
                         }
                     }
@@ -156,7 +158,11 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
             this.sendPacket(packet);
 
             if (!(entity instanceof PlayerEntity)) {
-                var playerRemovePacket = new PlayerRemoveS2CPacket(new ArrayList<>(Collections.singletonList(profile.getId())));
+                var playerRemovePacket = new PlayerListS2CPacket(PlayerListS2CPacket.Action.REMOVE_PLAYER);
+                //noinspection ConstantConditions
+                PlayerListS2CPacketAccessor listS2CPacketAccessor = (PlayerListS2CPacketAccessor) packet;
+                listS2CPacketAccessor.setEntries(Arrays.asList(new Entry(profile, 0, GameMode.SURVIVAL, Text.literal(profile.getName()), null)));
+
                 this.disguiselib$q.add(playerRemovePacket);
                 this.disguiselib$qTimer = 50;
             }

@@ -68,7 +68,12 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
         if (!this.disguiselib$skipCheck) {
             World world = this.player.getEntityWorld();
             Entity entity = null;
-            if (packet instanceof PlayerSpawnS2CPacket) {
+            if (packet instanceof PlayerListS2CPacket && ((PlayerListS2CPacket) packet).getAction().equals(PlayerListS2CPacket.Action.ADD_PLAYER)) {
+                Entry entry = ((PlayerListS2CPacketAccessor) packet).getEntries().get(0);
+                if (this.player.getGameProfile().getId().equals(entry.getProfile().getId()) && ((EntityDisguise) this.player).isDisguised()) {
+                    entity = this.player;
+                }
+            } else if (packet instanceof PlayerSpawnS2CPacket) {
                 entity = world.getEntityById(((PlayerSpawnS2CPacketAccessor) packet).getId());
             } else if (packet instanceof EntitySpawnS2CPacket) {
                 entity = world.getEntityById(((EntitySpawnS2CPacketAccessor) packet).getEntityId());
@@ -79,8 +84,7 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
                 // an ugly fix for #6
                 int entityId = ((EntityTrackerUpdateS2CPacketAccessor) packet).getEntityId();
                 if(entityId == this.player.getId() && ((EntityDisguise) this.player).isDisguised()) {
-                    List<DataTracker.Entry<?>> trackedValues = this.player.getDataTracker().getDirtyEntries();
-                    if(trackedValues == null) trackedValues = new ArrayList<>();
+                    List<DataTracker.Entry<?>> trackedValues = this.player.getDataTracker().getAllEntries();
                     if(((EntityDisguise) this.player).getDisguiseType() != EntityType.PLAYER) {
                         Byte flags = this.player.getDataTracker().get(EntityAccessor.getFLAGS());
 
@@ -101,8 +105,7 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
                         Entity disguised = ((EntityDisguise) original).getDisguiseEntity();
                         if(disguised != null) {
                             ((DisguiseUtils) original).updateTrackedData();
-                            List<DataTracker.Entry<?>> trackedValues = disguised.getDataTracker().getDirtyEntries();
-                            if(trackedValues == null) trackedValues = new ArrayList<>();
+                            List<DataTracker.Entry<?>> trackedValues = disguised.getDataTracker().getAllEntries();
                             ((EntityTrackerUpdateS2CPacketAccessor) packet).setTrackedValues(trackedValues);
                         }
                     }
@@ -156,16 +159,23 @@ public abstract class ServerPlayNetworkHandlerMixin_Disguiser {
 
         this.disguiselib$skipCheck = true;
         if (disguise.getDisguiseType() == EntityType.PLAYER) {
-            PlayerListS2CPacket packet = new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, (ServerPlayerEntity) disguiseEntity);
+            PlayerListS2CPacket packet = new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER);
+            //noinspection ConstantConditions
+            PlayerListS2CPacketAccessor listS2CPacketAccessor = (PlayerListS2CPacketAccessor) packet;
+
+            // Arrays.asList is used as it returns mutable map, otherwise
+            // this packet can cause some issues with other mods.
+            listS2CPacketAccessor.setEntries(Arrays.asList(new Entry(profile, 0, GameMode.SURVIVAL, Text.literal(profile.getName()), null)));
+
             this.sendPacket(packet);
 
             if (!(entity instanceof PlayerEntity)) {
-                var playerRemovePacket = new PlayerListS2CPacket(PlayerListS2CPacket.Action.REMOVE_PLAYER);
+                packet = new PlayerListS2CPacket(PlayerListS2CPacket.Action.REMOVE_PLAYER);
                 //noinspection ConstantConditions
-                PlayerListS2CPacketAccessor listS2CPacketAccessor = (PlayerListS2CPacketAccessor) packet;
+                listS2CPacketAccessor = (PlayerListS2CPacketAccessor) packet;
                 listS2CPacketAccessor.setEntries(Arrays.asList(new Entry(profile, 0, GameMode.SURVIVAL, Text.literal(profile.getName()), null)));
 
-                this.disguiselib$q.add(playerRemovePacket);
+                this.disguiselib$q.add(packet);
                 this.disguiselib$qTimer = 50;
             }
         }

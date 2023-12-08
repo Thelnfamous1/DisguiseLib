@@ -176,7 +176,7 @@ public abstract class EntityMixin_Disguise implements EntityDisguise, DisguiseUt
         manager.sendToDimension(new EntitiesDestroyS2CPacket(this.id), worldRegistryKey);
         manager.sendToDimension(new EntitySpawnS2CPacket(this.disguiselib$entity), worldRegistryKey); // will be replaced by network handler
 
-        manager.sendToDimension(new EntityTrackerUpdateS2CPacket(this.id, this.getDataTracker(), false), worldRegistryKey);
+        manager.sendToDimension(new EntityTrackerUpdateS2CPacket(this.id, this.getDataTracker(), true), worldRegistryKey);
         manager.sendToDimension(new EntityEquipmentUpdateS2CPacket(this.id, this.disguiselib$getEquipment()), worldRegistryKey); // Reload equipment
         manager.sendToDimension(new EntitySetHeadYawS2CPacket(this.disguiselib$entity, (byte) ((int) (this.getHeadYaw() * 256.0F / 360.0F))), worldRegistryKey); // Head correction
     }
@@ -359,14 +359,11 @@ public abstract class EntityMixin_Disguise implements EntityDisguise, DisguiseUt
         //noinspection ConstantConditions
         PlayerListS2CPacketAccessor accessor = (PlayerListS2CPacketAccessor) packet;
         accessor.setEntries(Arrays.asList(new PlayerListS2CPacket.Entry(this.disguiselib$profile, 0, GameMode.SURVIVAL, Text.literal(this.disguiselib$profile.getName()), null)));
+
         PlayerManager playerManager = this.world.getServer().getPlayerManager();
         playerManager.sendToAll(packet);
-
-        PlayerListS2CPacket addPacket = new PlayerListS2CPacket(ADD_PLAYER, (ServerPlayerEntity) this.disguiselib$disguiseEntity);
-        /*((PlayerListS2CPacketAccessor) addPacket).getEntries().forEach(entry -> {
-
-        });*/
-        playerManager.sendToAll(addPacket);
+        accessor.setAction(ADD_PLAYER);
+        playerManager.sendToAll(packet);
 
         ServerChunkManager manager = (ServerChunkManager) this.world.getChunkManager();
         ThreadedAnvilChunkStorage storage = manager.threadedAnvilChunkStorage;
@@ -470,6 +467,7 @@ public abstract class EntityMixin_Disguise implements EntityDisguise, DisguiseUt
             GameProfile profile = new GameProfile(this.disguiselib$entity.getUuid(), this.getName().getString());
             // Arrays.asList is needed as we PlayerList needs mutable list
             listS2CPacketAccessor.setEntries(Arrays.asList(new PlayerListS2CPacket.Entry(profile, 0, GameMode.SURVIVAL, this.getName(), null)));
+
             PlayerManager manager = this.world.getServer().getPlayerManager();
             manager.sendToAll(packet);
         }

@@ -116,6 +116,8 @@ public abstract class EntityMixin_Disguise implements EntityDisguise, DisguiseUt
     @Shadow
     protected abstract void addPassenger(Entity passenger);
 
+    @Shadow public abstract boolean hasNoGravity();
+
     /**
      * Tells you the disguised status.
      *
@@ -412,7 +414,7 @@ public abstract class EntityMixin_Disguise implements EntityDisguise, DisguiseUt
     @Override
     public void updateTrackedData() {
         // Minor datatracker thingies
-        this.disguiselib$disguiseEntity.setNoGravity(true);
+        this.disguiselib$disguiseEntity.setNoGravity(this.hasNoGravity()); // Reverted in order to fix a multiplayer gravity desync
         this.disguiselib$disguiseEntity.setCustomName(this.getCustomName());
         this.disguiselib$disguiseEntity.setCustomNameVisible(this.isCustomNameVisible());
         this.disguiselib$disguiseEntity.setSprinting(this.isSprinting());
